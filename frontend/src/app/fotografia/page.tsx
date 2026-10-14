@@ -245,6 +245,34 @@ export default function FotografiaPage() {
         </div>
       )}
 
+      {/* MODAL ÁREA DO CLIENTE */}
+      {showClientModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#1c212a] border border-[#c5a059]/40 p-8 rounded-2xl max-w-md w-full relative text-center">
+            <button onClick={() => setShowClientModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+            <h3 className="text-2xl font-serif text-white mb-2">Área do Cliente</h3>
+            <p className="text-xs text-gray-400 mb-6">Digite o código de acesso enviado pelo Iury:</p>
+
+            <input 
+              type="text" 
+              placeholder="Ex: CASAMENTO-BEATRIZ" 
+              value={clientCode} 
+              onChange={(e) => setClientCode(e.target.value.toUpperCase())} 
+              className="w-full text-center p-3 rounded-xl bg-black/50 border border-[#c5a059]/40 text-[#c5a059] font-mono font-bold mb-4 focus:outline-none" 
+            />
+
+            <button 
+              onClick={() => {
+                alert('Acessando galeria do cliente...');
+                setShowClientModal(false);
+              }} 
+              className="w-full py-3 rounded-xl bg-[#c5a059] text-black font-bold uppercase text-xs">
+              Acessar Minha Galeria
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
