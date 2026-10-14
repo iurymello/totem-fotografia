@@ -1,0 +1,99 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AdminUser {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  imageUrl  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BannerImage {
+  id        String   @id @default(uuid())
+  title     String?
+  imageUrl  String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ServiceItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String
+  step        Int      @default(1)
+  imageUrl    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contractItems ContractItem[]
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  CANCELLED
+}
+
+model Contract {
+  id              String         @id @default(uuid())
+  contractCode    String         @unique
+  
+  clientName      String
+  clientCpf       String
+  clientEmail     String
+  clientPhone     String
+  clientInstagram String?
+  
+  eventDate       DateTime
+  eventLocation   String
+  
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  status          ContractStatus @default(DRAFT)
+  
+  acceptedAt      DateTime?
+  acceptedIp      String?
+  contractText    String
+  
+  paymentId       String?
+  pixQrCode       String?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  items           ContractItem[]
+}
+
+model ContractItem {
+  id          String      @id @default(uuid())
+  contractId  String
+  serviceId   String
+  priceAtSale Decimal     @db.Decimal(10, 2)
+  quantity    Int         @default(1)
+
+  contract    Contract    @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  service     ServiceItem @relation(fields: [serviceId], references: [id])
+}
