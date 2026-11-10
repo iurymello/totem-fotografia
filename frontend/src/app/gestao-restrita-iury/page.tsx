@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-
 interface Category {
   id: string;
   name: string;
@@ -36,13 +34,11 @@ export default function AdminDashboard() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Forms
   const [newCatName, setNewCatName] = useState('');
   const [newCatImage, setNewCatImage] = useState('');
   const [newBannerImage, setNewBannerImage] = useState('');
   const [newBannerTitle, setNewBannerTitle] = useState('');
 
-  // Service Modal Form
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [serviceForm, setServiceForm] = useState({
@@ -54,22 +50,21 @@ export default function AdminDashboard() {
     imageUrl: '',
   });
 
-  const loadData = async () => {
+  const loadData = () => {
     setLoading(true);
     try {
       const savedCats = localStorage.getItem('totem_categories');
       const savedBanners = localStorage.getItem('totem_banners');
       const savedServices = localStorage.getItem('totem_services');
-      const token = localStorage.getItem('admin-token');
-      if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error('Não foi possível carregar os eventos salvos. Entre novamente no painel.');
-        setCategories(await response.json());
-      } else {
-        setCategories(savedCats ? JSON.parse(savedCats) : []);
-      }
+
+      setCategories(
+        savedCats
+          ? JSON.parse(savedCats)
+          : [
+              { id: '1', name: 'Casamento', imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800' },
+              { id: '2', name: '15 Anos', imageUrl: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800' },
+            ]
+      );
 
       setBanners(savedBanners ? JSON.parse(savedBanners) : []);
       setServices(savedServices ? JSON.parse(savedServices) : []);
@@ -89,49 +84,32 @@ export default function AdminDashboard() {
     router.push('/login');
   };
 
-  // Handlers Categorias / Eventos
-  const handleAddCategory = async (e: React.FormEvent) => {
+  const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    const token = localStorage.getItem('admin-token');
-    if (!token) {
-      alert('Sua sessão expirou. Entre novamente no painel.');
-      router.push('/login');
-      return;
-    }
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: newCatName.trim(), imageUrl: newCatImage.trim() || null }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Não foi possível cadastrar o evento.');
-      setCategories((current) => [...current, data]);
-      setNewCatName('');
-      setNewCatImage('');
-      alert('Evento cadastrado com sucesso!');
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.');
-    }
+
+    const newCategory: Category = {
+      id: Date.now().toString(),
+      name: newCatName.trim(),
+      imageUrl: newCatImage.trim() || null,
+    };
+
+    const updated = [...categories, newCategory];
+    setCategories(updated);
+    localStorage.setItem('totem_categories', JSON.stringify(updated));
+
+    setNewCatName('');
+    setNewCatImage('');
+    alert('Evento cadastrado com sucesso!');
   };
 
-  const handleDeleteCategory = async (id: string) => {
+  const handleDeleteCategory = (id: string) => {
     if (!confirm('Excluir este evento/categoria?')) return;
-    const token = localStorage.getItem('admin-token');
-    if (!token) return router.push('/login');
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/categories/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Não foi possível excluir o evento.');
-      setCategories((current) => current.filter((category) => category.id !== id));
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.');
-    }
+    const updated = categories.filter((category) => category.id !== id);
+    setCategories(updated);
+    localStorage.setItem('totem_categories', JSON.stringify(updated));
   };
 
-  // Handlers Banners
   const handleAddBanner = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBannerImage.trim()) return;
@@ -148,6 +126,7 @@ export default function AdminDashboard() {
 
     setNewBannerImage('');
     setNewBannerTitle('');
+    alert('Foto adicionada ao carrossel!');
   };
 
   const handleDeleteBanner = (id: string) => {
@@ -157,7 +136,6 @@ export default function AdminDashboard() {
     localStorage.setItem('totem_banners', JSON.stringify(updated));
   };
 
-  // Handlers Serviços
   const handleSaveService = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -193,6 +171,7 @@ export default function AdminDashboard() {
     setServices(updated);
     localStorage.setItem('totem_services', JSON.stringify(updated));
     setIsServiceModalOpen(false);
+    alert('Serviço salvo com sucesso!');
   };
 
   const handleDeleteService = (id: string) => {
@@ -223,7 +202,6 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* NAVEGAÇÃO ABAS */}
         <div className="flex gap-4 border-b border-gray-800 pb-2">
           <button
             onClick={() => setActiveTab('categories')}
@@ -255,7 +233,6 @@ export default function AdminDashboard() {
           <p className="text-center text-gray-400">A carregar dados do painel...</p>
         ) : (
           <>
-            {/* EVENTOS / CATEGORIAS */}
             {activeTab === 'categories' && (
               <div className="space-y-6">
                 <form onSubmit={handleAddCategory} className="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col sm:flex-row gap-4 items-end">
@@ -301,7 +278,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* BANNERS */}
             {activeTab === 'banners' && (
               <div className="space-y-6">
                 <form onSubmit={handleAddBanner} className="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col sm:flex-row gap-4 items-end">
@@ -337,7 +313,6 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* SERVIÇOS & PREÇOS */}
             {activeTab === 'services' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
@@ -345,7 +320,14 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => {
                       setEditingServiceId(null);
-                      setServiceForm({ title: '', description: '', price: '', category: categories[0]?.name || 'Casamento', step: '1', imageUrl: '' });
+                      setServiceForm({
+                        title: '',
+                        description: '',
+                        price: '',
+                        category: categories[0]?.name || 'Casamento',
+                        step: '1',
+                        imageUrl: '',
+                      });
                       setIsServiceModalOpen(true);
                     }}
                     className="px-4 py-2 bg-amber-400 text-gray-950 font-black rounded-xl text-xs"
@@ -368,10 +350,15 @@ export default function AdminDashboard() {
                       {services.map((s) => (
                         <tr key={s.id} className="hover:bg-gray-800/50">
                           <td className="p-4 font-semibold text-white">{s.title}</td>
-                          <td className="p-4"><span className="px-2 py-1 bg-gray-800 text-amber-400 rounded text-xs font-bold">{s.category}</span></td>
+                          <td className="p-4">
+                            <span className="px-2 py-1 bg-gray-800 text-amber-400 rounded text-xs font-bold">{s.category}</span>
+                          </td>
                           <td className="p-4 font-black text-amber-400">R$ {Number(s.price).toFixed(2)}</td>
                           <td className="p-4 text-right">
-                            <button onClick={() => handleDeleteService(s.id)} className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded hover:bg-red-500/30">
+                            <button
+                              onClick={() => handleDeleteService(s.id)}
+                              className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded hover:bg-red-500/30"
+                            >
                               🗑️ Excluir
                             </button>
                           </td>
@@ -385,6 +372,102 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
+
+      {isServiceModalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 border border-gray-800 w-full max-w-md rounded-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-gray-800 pb-2">
+              <h2 className="text-xl font-bold text-amber-400">
+                {editingServiceId ? 'Editar Pacote/Serviço' : 'Adicionar Novo Pacote/Serviço'}
+              </h2>
+              <button onClick={() => setIsServiceModalOpen(false)} className="text-gray-400 hover:text-white font-bold">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveService} className="space-y-3">
+              <div>
+                <label className="block text-xs uppercase text-gray-400 mb-1">Título do Serviço *</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="Ex: Cobertura da Cerimônia"
+                  value={serviceForm.title}
+                  onChange={(e) => setServiceForm({ ...serviceForm, title: e.target.value })}
+                  className="w-full bg-gray-950 border border-gray-800 rounded p-3 text-white text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs uppercase text-gray-400 mb-1">Evento / Categoria *</label>
+                  <select
+                    value={serviceForm.category}
+                    onChange={(e) => setServiceForm({ ...serviceForm, category: e.target.value })}
+                    className="w-full bg-gray-950 border border-gray-800 rounded p-3 text-white text-sm"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                    <option value="Entregas">Entregas Universais</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase text-amber-400 mb-1 font-bold">Etapa / Passo *</label>
+                  <select
+                    value={serviceForm.step}
+                    onChange={(e) => setServiceForm({ ...serviceForm, step: e.target.value })}
+                    className="w-full bg-gray-950 border border-gray-800 rounded p-3 text-amber-400 font-bold text-sm"
+                  >
+                    <option value="1">Passo 1 (Base)</option>
+                    <option value="2">Passo 2 (Ensaios)</option>
+                    <option value="3">Passo 3 (Extras)</option>
+                    <option value="4">Passo 4 (Entregas)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase text-gray-400 mb-1">Preço (R$) *</label>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={serviceForm.price}
+                  onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                  className="w-full bg-gray-950 border border-gray-800 rounded p-3 text-white text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase text-gray-400 mb-1">Foto de Capa (URL)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: https://..."
+                  value={serviceForm.imageUrl}
+                  onChange={(e) => setServiceForm({ ...serviceForm, imageUrl: e.target.value })}
+                  className="w-full bg-gray-950 border border-gray-800 rounded p-3 text-white text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase text-gray-400 mb-1">Descrição (Opcional)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Descrição breve do serviço..."
+                  value={serviceForm.description}
+                  onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                  className="w-full bg-gray-950 border border-gray-800 rounded p-3 text-white text-sm resize-none"
+                />
+              </div>
+
+              <button type="submit" className="w-full py-3 bg-amber-400 text-gray-950 font-black rounded-xl text-sm mt-2">
+                {editingServiceId ? 'Atualizar Serviço' : 'Cadastrar Serviço'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
