@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
+const API_BASE_URL = (process.env.NODE_ENV === 'development' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333') : '').replace(/\/$/, '');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -18,16 +18,14 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
-        method: 'POST',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('admin-token', data.token);
-        localStorage.setItem('admin-user', JSON.stringify(data.user));
         router.push('/gestao-restrita-iury');
       } else {
         alert(data.error || 'Credenciais inválidas.');

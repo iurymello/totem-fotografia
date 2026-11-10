@@ -6,7 +6,7 @@ import Carousel from '@/components/Carousel';
 import ServiceCard from '@/components/ServiceCard';
 import { useTheme } from '@/context/ThemeContext';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
+const API_BASE_URL = (process.env.NODE_ENV === 'development' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333') : '').replace(/\/$/, '');
 
 interface Category {
   id: string;
@@ -38,6 +38,7 @@ interface BudgetResponse {
 
 interface ContractSuccessData {
   contractId: string;
+  printToken: string;
   contractCode: string;
   totalAmount: number;
   pixCopyPaste: string;
@@ -152,6 +153,7 @@ export default function TotemBudgetApp() {
       const result = await response.json();
       setPaymentData({
         contractId: result.contractId,
+        printToken: result.printToken,
         contractCode: result.contractCode,
         totalAmount: result.totalAmount,
         pixCopyPaste: result.pixCopyPaste,
@@ -411,7 +413,7 @@ export default function TotemBudgetApp() {
             <img src={paymentData.pixQrCodeImage} alt="PIX" className="w-44 h-44 mx-auto bg-white p-2 rounded-xl shadow-md" />
             <p className="text-2xl font-black text-amber-500">R$ {paymentData.totalAmount.toFixed(2)}</p>
             <a
-                href={`${API_BASE_URL}/api/contracts/${paymentData.contractId}/print`}
+                href={`${API_BASE_URL}/api/contracts/${paymentData.contractId}/print?token=${encodeURIComponent(paymentData.printToken)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold rounded-xl border border-gray-700 text-xs shadow transition-all"

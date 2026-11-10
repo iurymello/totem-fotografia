@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
+const API_BASE_URL = (process.env.NODE_ENV === 'development' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333') : '').replace(/\/$/, '');
 
 interface Category {
   id: string;
@@ -55,21 +55,12 @@ export default function AdminDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const savedCats = localStorage.getItem('totem_categories');
       const savedBanners = localStorage.getItem('totem_banners');
       const savedServices = localStorage.getItem('totem_services');
-
-      const token = localStorage.getItem('admin-token');
-      if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error('Não foi possível carregar os eventos do banco de dados.');
-        setCategories(await response.json());
-      } else {
-        setCategories(savedCats ? JSON.parse(savedCats) : []);
-      }
-
+      const response = await fetch(`${API_BASE_URL}/api/admin/categories`, { credentials: 'include', cache: 'no-store' });
+      if (response.status === 401) { router.push('/login'); return; }
+      if (!response.ok) throw new Error('Não foi possível carregar os eventos do banco de dados.');
+      setCategories(await response.json());
       setBanners(savedBanners ? JSON.parse(savedBanners) : []);
       setServices(savedServices ? JSON.parse(savedServices) : []);
     } catch (e) {
@@ -79,54 +70,36 @@ export default function AdminDashboard() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('admin-token');
-    router.push('/login');
+  const handleLogout = async () => {
+    try { await fetch(`${API_BASE_URL}/api/admin/logout`, { method: 'POST', credentials: 'include' }); }
+    finally { router.push('/login'); }
   };
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    const token = localStorage.getItem('admin-token');
-    if (!token) {
-      alert('Sua sessão expirou. Entre novamente no painel.');
-      router.push('/login');
-      return;
-    }
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newCatName.trim(), imageUrl: newCatImage.trim() || null }),
       });
       const data = await response.json();
+      if (response.status === 401) { router.push('/login'); return; }
       if (!response.ok) throw new Error(data.error || 'Não foi possível cadastrar o evento.');
-      setCategories((current) => [...current, data]);
-      setNewCatName('');
-      setNewCatImage('');
+      setCategories((current) => [...current, data]); setNewCatName(''); setNewCatImage('');
       alert('Evento cadastrado com sucesso!');
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.');
-    }
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.'); }
   };
 
   const handleDeleteCategory = async (id: string) => {
     if (!confirm('Excluir este evento/categoria?')) return;
-    const token = localStorage.getItem('admin-token');
-    if (!token) return router.push('/login');
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/categories/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(`${API_BASE_URL}/api/admin/categories/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (response.status === 401) { router.push('/login'); return; }
       if (!response.ok) throw new Error('Não foi possível excluir o evento.');
       setCategories((current) => current.filter((category) => category.id !== id));
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.');
-    }
+    } catch (error) { alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.'); }
   };
 
   const handleAddBanner = (e: React.FormEvent) => {

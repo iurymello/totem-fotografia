@@ -97,3 +97,13 @@ model ContractItem {
   contract    Contract    @relation(fields: [contractId], references: [id], onDelete: Cascade)
   service     ServiceItem @relation(fields: [serviceId], references: [id])
 }
+
+model ClientGalleryLink {
+  id        String    @id @default(uuid())
+  label     String
+  tokenHash String    @unique
+  driveUrl  String
+  expiresAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+}
