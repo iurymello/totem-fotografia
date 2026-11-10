@@ -6,6 +6,8 @@ import Carousel from '@/components/Carousel';
 import ServiceCard from '@/components/ServiceCard';
 import { useTheme } from '@/context/ThemeContext';
 
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333').replace(/\/$/, '');
+
 interface Category {
   id: string;
   name: string;
@@ -81,9 +83,9 @@ export default function TotemBudgetApp() {
     async function initData() {
       try {
         const [catRes, banRes, servRes] = await Promise.all([
-          fetch('http://localhost:3333/api/categories'),
-          fetch('http://localhost:3333/api/banners'),
-          fetch('http://localhost:3333/api/services'),
+          fetch(`${API_BASE_URL}/api/categories`),
+          fetch(`${API_BASE_URL}/api/banners`),
+          fetch(`${API_BASE_URL}/api/services`),
         ]);
 
         if (catRes.ok) setCategories(await catRes.json());
@@ -107,7 +109,7 @@ export default function TotemBudgetApp() {
 
       setCalculating(true);
       try {
-        const response = await fetch('http://localhost:3333/api/budget/calculate', {
+        const response = await fetch(`${API_BASE_URL}/api/budget/calculate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ selectedServiceIds: selectedIds }),
@@ -138,7 +140,7 @@ export default function TotemBudgetApp() {
 
     setSubmitting(true);
     try {
-      const response = await fetch('http://localhost:3333/api/contracts', {
+      const response = await fetch(`${API_BASE_URL}/api/contracts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -409,7 +411,7 @@ export default function TotemBudgetApp() {
             <img src={paymentData.pixQrCodeImage} alt="PIX" className="w-44 h-44 mx-auto bg-white p-2 rounded-xl shadow-md" />
             <p className="text-2xl font-black text-amber-500">R$ {paymentData.totalAmount.toFixed(2)}</p>
             <a
-              href={`http://localhost:3333/api/contracts/${paymentData.contractId}/print`}
+                href={`${API_BASE_URL}/api/contracts/${paymentData.contractId}/print`}
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold rounded-xl border border-gray-700 text-xs shadow transition-all"
