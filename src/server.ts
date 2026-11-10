@@ -322,6 +322,11 @@ app.post('/api/admin/categories', { onRequest: [(app as any).authenticate] }, as
   return reply.status(201).send(category);
 });
 
+app.get('/api/admin/categories', { onRequest: [(app as any).authenticate] }, async (request, reply) => {
+  const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  return reply.send(categories);
+});
+
 app.delete('/api/admin/categories/:id', { onRequest: [(app as any).authenticate] }, async (request, reply) => {
   const { id } = request.params as { id: string };
   await prisma.category.delete({ where: { id } });

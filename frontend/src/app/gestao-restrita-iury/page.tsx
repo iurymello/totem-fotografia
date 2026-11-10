@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+
 interface Category {
   id: string;
   name: string;
@@ -52,17 +54,22 @@ export default function AdminDashboard() {
     imageUrl: '',
   });
 
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
     try {
       const savedCats = localStorage.getItem('totem_categories');
       const savedBanners = localStorage.getItem('totem_banners');
       const savedServices = localStorage.getItem('totem_services');
-
-      setCategories(savedCats ? JSON.parse(savedCats) : [
-        { id: '1', name: 'Casamento', imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800' },
-        { id: '2', name: '15 Anos', imageUrl: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800' }
-      ]);
+      const token = localStorage.getItem('admin-token');
+      if (token) {
+        const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error('Não foi possível carregar os eventos salvos. Entre novamente no painel.');
+        setCategories(await response.json());
+      } else {
+        setCategories(savedCats ? JSON.parse(savedCats) : []);
+      }
 
       setBanners(savedBanners ? JSON.parse(savedBanners) : []);
       setServices(savedServices ? JSON.parse(savedServices) : []);
@@ -83,30 +90,45 @@ export default function AdminDashboard() {
   };
 
   // Handlers Categorias / Eventos
-  const handleAddCategory = (e: React.FormEvent) => {
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: newCatName.trim(),
-      imageUrl: newCatImage.trim() || null,
-    };
-
-    const updated = [...categories, newCategory];
-    setCategories(updated);
-    localStorage.setItem('totem_categories', JSON.stringify(updated));
-
-    setNewCatName('');
-    setNewCatImage('');
-    alert('Evento cadastrado com sucesso!');
+    const token = localStorage.getItem('admin-token');
+    if (!token) {
+      alert('Sua sessão expirou. Entre novamente no painel.');
+      router.push('/login');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newCatName.trim(), imageUrl: newCatImage.trim() || null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível cadastrar o evento.');
+      setCategories((current) => [...current, data]);
+      setNewCatName('');
+      setNewCatImage('');
+      alert('Evento cadastrado com sucesso!');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.');
+    }
   };
 
-  const handleDeleteCategory = (id: string) => {
+  const handleDeleteCategory = async (id: string) => {
     if (!confirm('Excluir este evento/categoria?')) return;
-    const updated = categories.filter((c) => c.id !== id);
-    setCategories(updated);
-    localStorage.setItem('totem_categories', JSON.stringify(updated));
+    const token = localStorage.getItem('admin-token');
+    if (!token) return router.push('/login');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/categories/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Não foi possível excluir o evento.');
+      setCategories((current) => current.filter((category) => category.id !== id));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao conectar com o servidor.');
+    }
   };
 
   // Handlers Banners
